@@ -1,48 +1,28 @@
-from typing import List
 from pydantic_settings import BaseSettings
-from pydantic import AnyHttpUrl
+from typing import List
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "SaaS API Platform"
-    VERSION: str = "1.0.0"
-    API_V1_STR: str = "/api/v1"
+    # Database settings
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_TIMEOUT: int = 30
+    DB_POOL_RECYCLE: int = 1800
     
-    # Security
-    SECRET_KEY: str
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    PASSWORD_MIN_LENGTH: int = 8
-    MAX_LOGIN_ATTEMPTS: int = 5
-    LOGIN_ATTEMPTS_WINDOW: int = 15  # minutes
+    # Redis settings
+    REDIS_MAX_CONNECTIONS: int = 100
+    REDIS_POOL_SIZE: int = 20
     
-    # Rate Limiting
-    API_RATE_LIMIT: int = 100  # requests per minute
-    REDIS_HOST: str = "localhost"
-    REDIS_PORT: int = 6379
+    # Rate limiting
+    RATE_LIMIT_WINDOW: int = 60
+    RATE_LIMIT_MAX_REQUESTS: int = 100
     
-    # Database
-    POSTGRES_SERVER: str
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
-    SQLALCHEMY_DATABASE_URI: str = None
-    POOL_SIZE: int = 5
-    MAX_OVERFLOW: int = 10
+    # Cache settings
+    CACHE_TTL: int = 300
     
-    # CORS
-    ALLOWED_ORIGINS: List[AnyHttpUrl] = [
-        "http://localhost:3000",
-    ]
+    # Performance tuning
+    WORKER_PROCESSES: int = 4
+    WORKER_CONNECTIONS: int = 1000
+    KEEPALIVE_TIMEOUT: int = 65
     
-    # Stripe
-    STRIPE_SECRET_KEY: str
-    STRIPE_WEBHOOK_SECRET: str
-    STRIPE_PRICE_ID_BASIC: str
-    STRIPE_PRICE_ID_PRO: str
-
     class Config:
-        case_sensitive = True
         env_file = ".env"
-
-settings = Settings()
