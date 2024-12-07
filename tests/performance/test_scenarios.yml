@@ -1,0 +1,31 @@
+scenarios:
+  api_load_test:
+    - name: Authentication Load
+      users: 10000
+      ramp_up: 300
+      duration: 1800
+      requests:
+        - login: 40%
+        - refresh_token: 10%
+        - logout: 5%
+
+    - name: API Usage
+      users: 50000
+      ramp_up: 600
+      duration: 1800
+      requests:
+        - analytics: 30%
+        - user_data: 20%
+        - subscription: 15%
+
+    - name: Peak Load
+      users: 100000
+      ramp_up: 900
+      duration: 3600
+      requests:
+        - mixed_operations: 100%
+
+thresholds:
+  response_time_p95: 500ms
+  error_rate: 1%
+  throughput: 10000rps
