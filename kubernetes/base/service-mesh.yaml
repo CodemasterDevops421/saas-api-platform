@@ -1,0 +1,31 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: backend-vs
+spec:
+  hosts:
+  - "api.saasplatform.com"
+  gateways:
+  - saas-platform-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /api/v1
+    route:
+    - destination:
+        host: backend-service
+        subset: v1
+      weight: 90
+    - destination:
+        host: backend-service
+        subset: v2
+      weight: 10
+    retries:
+      attempts: 3
+      perTryTimeout: 2s
+    fault:
+      delay:
+        percentage:
+          value: 0.1
+        fixedDelay: 5s
+    timeout: 10s
