@@ -1,0 +1,31 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: backend-monitor
+spec:
+  selector:
+    matchLabels:
+      app: backend
+  endpoints:
+  - port: metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: backend-alerts
+spec:
+  groups:
+  - name: backend
+    rules:
+    - alert: HighErrorRate
+      expr: rate(http_requests_total{status=~"5.."}[5m]) > 1
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        description: High error rate detected
+    - alert: HighLatency
+      expr: http_request_duration_seconds > 2
+      for: 5m
+      labels:
+        severity: warning
