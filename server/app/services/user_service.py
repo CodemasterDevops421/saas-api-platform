@@ -1,62 +1,73 @@
+from typing import List, Optional
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
-from ..models.user import User
-from ..schemas.user import UserCreate
-from ..core.security import get_password_hash, verify_password, verify_password_strength
-from redis import Redis
-from ..core.config import settings
-import time
+from fastapi import HTTPException, status
+from ..models.user import User, UserStatus
+from ..schemas.user import UserCreate, UserUpdate
+from ..core.security import get_password_hash, verify_password
+from datetime import datetime
 
-redis_client = Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=1)
+class UserService:
+    @staticmethod
+    def get_user(db: Session, user_id: int) -> Optional[User]:
+        return db.query(User).filter(User.id == user_id).first()
 
-def check_login_attempts(email: str) -> bool:
-    key = f"login_attempts:{email}"
-    attempts = redis_client.get(key)
-    if attempts and int(attempts) >= settings.MAX_LOGIN_ATTEMPTS:
-        return False
-    return True
+    @staticmethod
+    def get_user_by_email(db: Session, email: str) -> Optional[User]:
+        return db.query(User).filter(User.email == email).first()
 
-def record_login_attempt(email: str, success: bool):
-    key = f"login_attempts:{email}"
-    if success:
-        redis_client.delete(key)
-    else:
-        redis_client.incr(key)
-        redis_client.expire(key, settings.LOGIN_ATTEMPTS_WINDOW * 60)
+    @staticmethod
+    def create_user(db: Session, user: UserCreate) -> User:
+        if UserService.get_user_by_email(db, user.email):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
 
-def get_user_by_email(db: Session, email: str):
-    return db.query(User).filter(User.email == email).first()
-
-def create_user(db: Session, user: UserCreate):
-    if not verify_password_strength(user.password):
-        raise HTTPException(status_code=400, detail="Password does not meet security requirements")
-    
-    hashed_password = get_password_hash(user.password)
-    db_user = User(
-        email=user.email,
-        hashed_password=hashed_password,
-        full_name=user.full_name
-    )
-    try:
+        db_user = User(
+            email=user.email,
+            hashed_password=get_password_hash(user.password),
+            full_name=user.full_name,
+            status=UserStatus.ACTIVE
+        )
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
         return db_user
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
 
-def authenticate(db: Session, email: str, password: str):
-    if not check_login_attempts(email):
-        raise HTTPException(
-            status_code=429,
-            detail=f"Too many login attempts. Try again in {settings.LOGIN_ATTEMPTS_WINDOW} minutes"
-        )
-    
-    user = get_user_by_email(db, email=email)
-    if not user or not verify_password(password, user.hashed_password):
-        record_login_attempt(email, False)
-        return None
-    
-    record_login_attempt(email, True)
-    return user
+    @staticmethod
+    def update_user(db: Session, user_id: int, user_update: UserUpdate) -> User:
+        db_user = UserService.get_user(db, user_id)
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        update_data = user_update.dict(exclude_unset=True)
+        if "password" in update_data:
+            update_data["hashed_password"] = get_password_hash(update_data.pop("password"))
+
+        for field, value in update_data.items():
+            setattr(db_user, field, value)
+
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+
+    @staticmethod
+    def delete_user(db: Session, user_id: int) -> bool:
+        user = UserService.get_user(db, user_id)
+        if not user:
+            return False
+        
+        user.status = UserStatus.INACTIVE
+        user.is_active = False
+        db.commit()
+        return True
+
+    @staticmethod
+    def authenticate(db: Session, email: str, password: str) -> Optional[User]:
+        user = UserService.get_user_by_email(db, email=email)
+        if not user or not verify_password(password, user.hashed_password):
+            return None
+            
+        user.last_login = datetime.utcnow()
+        db.commit()
+        return user
