@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import ApiKeys from '../components/ApiKeys';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -25,10 +26,15 @@ export default function Dashboard() {
 
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
-            <dt className="text-sm font-medium text-gray-500 truncate">API Keys</dt>
-            <dd className="mt-1 text-3xl font-semibold text-gray-900">-</dd>
+            <dt className="text-sm font-medium text-gray-500 truncate">Response Time</dt>
+            <dd className="mt-1 text-3xl font-semibold text-gray-900">150ms</dd>
           </div>
         </div>
+      </div>
+
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold mb-6">API Keys</h2>
+        <ApiKeys />
       </div>
     </div>
   );
