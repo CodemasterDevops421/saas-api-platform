@@ -1,0 +1,34 @@
+groups:
+- name: SaaS Platform Alerts
+  rules:
+  - alert: HighErrorRate
+    expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.05
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: Error rate above 5% for 5 minutes
+
+  - alert: HighLatency
+    expr: rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m]) > 0.5
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: Average response time above 500ms
+
+  - alert: HighCPUUsage
+    expr: avg(rate(process_cpu_seconds_total[5m])) > 0.8
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: CPU usage above 80%
+
+  - alert: HighMemoryUsage
+    expr: process_resident_memory_bytes / process_memory_limit_bytes > 0.8
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: Memory usage above 80%
